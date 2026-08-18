@@ -1,0 +1,32 @@
+# Dependencies and frontend output
+node_modules/
+dist/
+
+# Rust and Tauri output
+src-tauri/target/
+
+# Local research and diagnostics
+.analysis_env/
+.references/
+.tmp/
+diagnostics/
+live-editor/
+career_lens_diagnostic.txt
+career_lens_export.csv
+CHECKPOINT.md
+
+# Generated TypeScript build files
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Environment, logs, and editor files
+.env
+.env.*
+!.env.example
+*.log
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,1 @@
+{"main-window":{"identifier":"main-window","description":"Minimal capability set for the Career Lens main window.","local":true,"windows":["main"],"permissions":["core:default"]}}

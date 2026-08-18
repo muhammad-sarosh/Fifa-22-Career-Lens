@@ -1,0 +1,4 @@
+playerid,name,club,age,positions,preferredfoot,scope,knowledge,overall,value,wage,ballcontrol,dribbling,crossing,shortpassing,longpassing,finishing,headingaccuracy,volleys,curve,freekickaccuracy,penalties,acceleration,sprintspeed,agility,balance,reactions,shotpower,jumping,stamina,strength,longshots,aggression,interceptions,attackingposition,vision,composure,marking,standingtackle,slidingtackle,gkdiving,gkhandling,gkkicking,gkpositioning,gkreflexes
+1001,Example Squad Player,Example FC,22,"RW,LW",Left,My squad,Exact,74,8500000,18000,79,80,74,72,66,70,45,68,73,62,64,87,89,84,78,75,76,58,75,62,71,51,35,73,71,71,35,32,28,,,,,
+1002,Partly Scouted Player,Unknown club,19,CM,Right,Scouting,Ranged,68-75,3500000-6200000,,70-77,69-76,,72-79,70-78,,,,,,,67-75,66-74,71-79,68-76,69-77,,,70-78,,65-73,,61-70,,72-80,68-76,,,,,,,,
+1003,Unscouted Player,Unknown club,20,ST,Unknown,Player search,Unknown,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

@@ -1,0 +1,18 @@
+[package]
+name = "career-lens"
+version = "1.0.0"
+description = "Read-only Career Mode player analysis"
+authors = ["Career Lens"]
+edition = "2021"
+
+[lib]
+name = "career_lens_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+tauri-plugin-dialog = "2.7.2"
