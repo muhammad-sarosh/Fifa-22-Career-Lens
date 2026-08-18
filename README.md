@@ -1,10 +1,10 @@
 # Career Lens
 
-Career Lens is a read-only player database and comparison app for FIFA 22 Manager Career Mode. It reads a selected career save directly, respects the information currently available to your manager, and helps compare players without modifying the save or requiring FIFA Live Editor.
+Career Lens is a read-only player database and comparison app for FIFA 22 Manager Career Mode. It reads a selected career save directly, respects the information currently available to your manager, and helps compare players without modifying the save.
 
 ## Highlights
 
-- Reads FIFA 22 `Career*` saves directly and keeps the original file untouched.
+- Reads FIFA 22 Career saves directly and keeps the original file untouched.
 - Finds players from your squad, shortlist, scouting assignments, player searches, and the wider database.
 - Preserves FIFA's exact, ranged, and unknown scouting information instead of revealing hidden ratings.
 - Shows every technical, movement, power, mental, defending, and goalkeeping attribute.
@@ -20,15 +20,12 @@ Career Lens is a read-only player database and comparison app for FIFA 22 Manage
 
 1. Download `Career Lens_1.0.0_x64-setup.exe` from the latest GitHub release.
 2. Run the installer, choose a destination folder, and optionally create a desktop shortcut.
-3. Leave **Open Career Lens** selected on the final installer screen, or open `career-lens.exe` later.
-
-The installer does not create an uninstaller. Delete the application executable and, if you created one, its desktop shortcut to remove the app.
 
 ## Using Career Lens
 
 1. Save your career in FIFA 22.
 2. Open Career Lens and choose **Select save**.
-3. Select the relevant `Career*` file from your FIFA 22 settings folder.
+3. Select the relevant Career file from your FIFA 22 settings folder.
 4. Browse or filter the player database, select players, and open **Compare**.
 5. Choose **All attributes** for a general comparison, or select a position and role for weighted scoring and ranking.
 
