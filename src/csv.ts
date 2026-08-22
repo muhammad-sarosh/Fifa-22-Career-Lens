@@ -1,6 +1,6 @@
 import Papa from 'papaparse'
 import { emptyAttributes } from './scoring'
-import { attributeKeys, type AttributeKey, type ImportResult, type KnowledgeLevel, type Player, type PlayerScope, type RatingRange } from './types'
+import { attributeKeys, type AttributeKey, type CurrencyCode, type ImportResult, type KnowledgeLevel, type Player, type PlayerScope, type RatingRange } from './types'
 
 const aliases: Record<AttributeKey, string[]> = {
   ballControl: ['ballcontrol'], dribbling: ['dribbling'], crossing: ['crossing'], shortPassing: ['shortpassing', 'shortpass'], longPassing: ['longpassing', 'longpass'],
@@ -53,11 +53,23 @@ function readRange(row: Record<string, string>, names: string[], money = false):
 
 const scopeValue = (value: string): PlayerScope => {
   const scope = value.toLowerCase()
+  if (scope.includes('youth') || scope.includes('academy')) return 'Youth academy'
   if (scope.includes('squad')) return 'My squad'
   if (scope.includes('scout')) return 'Scouting'
   if (scope.includes('short')) return 'Shortlist'
   if (scope.includes('search')) return 'Player search'
   return 'Other'
+}
+
+const booleanValue = (value: string, fallback: boolean) => {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  if (!normalized) return fallback
+  return ['1', 'true', 'yes', 'y'].includes(normalized)
+}
+
+const currencyCode = (value: string): CurrencyCode => {
+  const normalized = String(value ?? '').trim().toUpperCase()
+  return normalized === 'EUR' ? 'EUR' : normalized === 'GBP' ? 'GBP' : 'USD'
 }
 
 export function parsePlayerCsv(csv: string): ImportResult {
@@ -76,6 +88,7 @@ export function parsePlayerCsv(csv: string): ImportResult {
     const knowledge: KnowledgeLevel = knowledgeText.includes('unknown') || known.length === 0 ? 'Unknown' : knowledgeText.includes('range') || hasRanges ? 'Ranged' : 'Exact'
     const footText = String(row.preferredfoot || row.foot || '').toLowerCase()
     const preferredFoot: Player['preferredFoot'] = footText === 'left' ? 'Left' : footText === 'right' ? 'Right' : 'Unknown'
+    const scope = scopeValue(row.scope || row.source || '')
     players.push({
       id: row.playerid || row.id || `import-${index}-${normalize(name)}`,
       name,
@@ -84,9 +97,13 @@ export function parsePlayerCsv(csv: string): ImportResult {
       positions: String(row.positions || row.position || 'N/A').split(/[,/]/).map((position) => position.trim()).filter(Boolean),
       preferredFoot,
       overall: readRange(row, ['overall', 'ovr']),
+      potential: readRange(row, ['potential', 'pot']),
       value: readRange(row, ['value'], true),
       wage: readRange(row, ['wage'], true),
-      scope: scopeValue(row.scope || row.source || ''),
+      currency: currencyCode(row.currency),
+      scope,
+      shortlisted: booleanValue(row.shortlisted, scope === 'Shortlist'),
+      scouting: booleanValue(row.scouting, scope === 'Scouting'),
       knowledge,
       attributes,
     })

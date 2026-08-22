@@ -10,8 +10,9 @@ export const attributeKeys = [
 
 export type AttributeKey = (typeof attributeKeys)[number]
 export type RatingRange = { min: number; max: number }
-export type PlayerScope = 'My squad' | 'Scouting' | 'Shortlist' | 'Player search' | 'Other'
+export type PlayerScope = 'My squad' | 'Youth academy' | 'Scouting' | 'Shortlist' | 'Player search' | 'Other'
 export type KnowledgeLevel = 'Exact' | 'Ranged' | 'Unknown'
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP'
 
 export type Player = {
   id: string
@@ -21,9 +22,13 @@ export type Player = {
   positions: string[]
   preferredFoot: 'Left' | 'Right' | 'Unknown'
   overall: RatingRange | null
+  potential: RatingRange | null
   value: RatingRange | null
   wage: RatingRange | null
+  currency?: CurrencyCode
   scope: PlayerScope
+  shortlisted: boolean
+  scouting: boolean
   knowledge: KnowledgeLevel
   attributes: Record<AttributeKey, RatingRange | null>
 }

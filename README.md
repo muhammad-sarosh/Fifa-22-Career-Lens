@@ -5,21 +5,23 @@ Career Lens is a read-only player database and comparison app for FIFA 22 Manage
 ## Highlights
 
 - Reads FIFA 22 Career saves directly and keeps the original file untouched.
-- Finds players from your squad, shortlist, scouting assignments, player searches, and the wider database.
+- Finds players from your squad, youth academy, shortlist, scouting assignments, player searches, and the wider database.
 - Preserves FIFA's exact, ranged, and unknown scouting information instead of revealing hidden ratings.
-- Shows every technical, movement, power, mental, defending, and goalkeeping attribute.
-- Compares many players at once with per-row best/worst highlighting and click-to-focus rows.
-- Includes a ranking view ordered by the selected position and role score.
-- Provides editable 0–10 position presets, role variants, saved presets, and temporary overrides.
+- Shows FIFA's familiar physical, mental, technical, and goalkeeping attribute layout and colour bands.
+- Compares many players in matrix, profile, or ranking views with clear best/worst highlighting.
+- Includes focus mode, highlighted rows, synchronized profile scrolling, and quick ranking cut-offs.
+- Shows score, overall, age, value, and wage in ranking view.
+- Provides editable 0–10 position presets, role variants, saved presets, temporary overrides, and custom presets.
+- Exports the current matrix or ranking as Markdown text or a `.md` file.
 - Supports neutral, buying, and selling value comparison modes.
-- Searches naturally across player names, clubs, and positions, such as `frens ndiaye`.
-
-> Market-value estimates are not completely accurate yet and will be refined in a future release.
+- Detects the career's dollar, euro, or sterling setting for values and wages.
+- Supports multi-position filters, keyboard navigation, select-all actions, and accent-insensitive search.
 
 ## Installation
 
-1. Download `Career Lens_1.0.0_x64-setup.exe` from the latest GitHub release.
+1. Download `Career Lens_1.1.0_x64-setup.exe` from the latest GitHub release.
 2. Run the installer, choose a destination folder, and optionally create a desktop shortcut.
+3. Leave **Open Career Lens** selected on the final screen, or launch it later from the installed executable or shortcut.
 
 ## Using Career Lens
 

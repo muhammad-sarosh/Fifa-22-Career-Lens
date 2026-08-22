@@ -131,40 +131,177 @@ fn player_age(birth_days: i64, current_date: u32) -> Option<u32> {
 }
 
 fn overall_base_value(overall: i64) -> i64 {
-    const VALUES: [i64; 61] = [
-        15_000,15_000,15_000,15_000,15_000,15_000,15_000,15_000,15_000,15_000,
-        20_000,25_000,34_000,40_000,46_000,54_000,61_000,70_000,86_000,105_000,
-        140_000,170_000,205_000,250_000,305_000,365_000,435_000,515_000,605_000,710_000,
-        1_200_000,1_600_000,2_100_000,2_700_000,3_800_000,4_500_000,5_200_000,6_000_000,7_000_000,8_500_000,
-        10_000_000,12_000_000,15_000_000,17_500_000,21_000_000,26_000_000,30_000_000,34_000_000,40_000_000,45_000_000,
-        52_000_000,60_000_000,68_000_000,75_000_000,83_000_000,90_000_000,110_000_000,120_000_000,140_000_000,150_000_000,200_000_000,
+    // Exact FIFA 22 RATINGRANGE bands. A band is selected by the first
+    // threshold greater than or equal to the player's overall.
+    const VALUES_51_TO_100: [i64; 50] = [
+        50_000,68_000,80_000,92_000,108_000,122_000,140_000,174_000,192_000,210_000,
+        280_000,340_000,410_000,500_000,610_000,730_000,870_000,1_030_000,1_190_000,
+        1_360_000,1_600_000,2_000_000,2_600_000,3_600_000,4_800_000,6_400_000,
+        9_000_000,12_000_000,15_000_000,18_000_000,22_000_000,26_000_000,31_000_000,
+        36_000_000,46_000_000,58_000_000,68_000_000,78_000_000,88_000_000,
+        102_000_000,112_000_000,126_000_000,142_000_000,154_000_000,170_000_000,
+        184_000_000,210_000_000,224_000_000,250_000_000,400_000_000,
     ];
-    if overall < 40 { 1_000 } else { VALUES.get((overall - 40) as usize).copied().unwrap_or(0) }
+    match overall {
+        i64::MIN..=5 => 20_000,
+        6..=40 => 30_000,
+        41..=50 => 40_000,
+        51..=100 => VALUES_51_TO_100[(overall - 51) as usize],
+        _ => VALUES_51_TO_100[VALUES_51_TO_100.len() - 1],
+    }
 }
 
-fn round_market_value(value: f64) -> i64 {
-    let divisor = if value <= 5_000.0 { 50.0 } else if value <= 10_000.0 { 1_000.0 }
-        else if value <= 50_000.0 { 5_000.0 } else if value <= 250_000.0 { 10_000.0 }
-        else if value <= 1_000_000.0 { 25_000.0 } else if value <= 5_000_000.0 { 100_000.0 } else { 500_000.0 };
-    let remainder = value % divisor;
-    (if remainder > divisor / 2.0 { value + divisor - remainder } else { value - remainder }) as i64
+fn round_market_value_ratio(numerator: i128, denominator: i128) -> i64 {
+    let divisor = if numerator <= 5_000 * denominator { 50 }
+        else if numerator <= 10_000 * denominator { 1_000 }
+        else if numerator <= 50_000 * denominator { 5_000 }
+        else if numerator <= 250_000 * denominator { 10_000 }
+        else if numerator <= 1_000_000 * denominator { 25_000 }
+        else if numerator <= 5_000_000 * denominator { 100_000 }
+        else { 500_000 };
+    let step = i128::from(divisor) * denominator;
+    let remainder = numerator % step;
+    let rounded = if remainder > step / 2 { numerator + step - remainder } else { numerator - remainder };
+    (rounded / denominator) as i64
 }
 
-fn market_value(overall: i64, potential: i64, age: u32, position: i64) -> i64 {
-    const POSITION: [i64; 28] = [-40,-15,-18,-18,-15,-15,-15,-18,-18,-15,-15,-15,15,12,12,12,15,15,15,15,18,18,18,15,18,18,18,15];
-    // FIFA 22 keeps the first three points of remaining potential in its first
-    // value band. This differs from the older public curve, which assigned a
-    // 20% modifier at two points and overvalued known FIFA 22 career players.
-    const POTENTIAL: [i64; 17] = [0,15,15,15,30,35,40,45,55,65,75,90,100,120,160,190,235];
-    const AGE: [i64; 41] = [18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,30,42,50,48,48,48,48,46,44,40,35,30,25,15,0,-25,-40,-50,-65,-65,-65,-75,-1000];
-    let base = overall_base_value(overall) as f64;
-    let position_factor = POSITION.get(position as usize).copied().unwrap_or(-40) as f64 / 100.0;
-    let remaining = (potential - overall).max(0) as usize;
-    let potential_factor = POTENTIAL.get(remaining).copied().unwrap_or(*POTENTIAL.last().unwrap()) as f64 / 100.0;
-    let adjusted_age = if position == 0 && age >= 28 { age - 2 } else { age } as usize;
-    let age_factor = AGE.get(adjusted_age).copied().unwrap_or(-1000) as f64 / 100.0;
-    let value = round_market_value(base * (1.0 + position_factor + potential_factor + age_factor));
-    if value < 0 { (base as i64 / 10).max(10_000) } else { value.max(10_000) }
+fn potential_modifier(remaining: i64) -> i64 {
+    match remaining {
+        i64::MIN..=0 => 0,
+        1 => 10,
+        2 => 17,
+        3 => 25,
+        4 => 33,
+        5 => 42,
+        6 => 50,
+        7 => 100,
+        8..=11 => 125,
+        12..=15 => 150,
+        16..=19 => 175,
+        20 => 200,
+        21..=25 => 250,
+        26..=30 => 350,
+        31..=40 => 450,
+        _ => 500,
+    }
+}
+
+fn age_modifier(age: u32, goalkeeper: bool) -> i64 {
+    // FIFA 22 caps the valuation age for goalkeepers at 35. This behavior is
+    // confirmed by every goalkeeper in the launch database, including ages 36-43.
+    let age = if goalkeeper { age.min(35) } else { age };
+    match age {
+        0..=17 => 12,
+        18 => 17,
+        19 => 23,
+        20 => 27,
+        21..=22 => 33,
+        23..=24 => 30,
+        25 => 25,
+        26 => 23,
+        27 => 20,
+        28 => 13,
+        29 => 10,
+        30 => 8,
+        31 => -8,
+        32 => -12,
+        33 => -32,
+        34 => -50,
+        35 => -57,
+        36..=40 => -67,
+        41..=50 => -80,
+        _ => -100,
+    }
+}
+
+fn market_value_in_currency(
+    overall: i64, potential: i64, age: u32, position: i64,
+    currency_numerator: i64, currency_denominator: i64,
+) -> i64 {
+    const POSITION: [i64; 28] = [-30,0,-7,-7,-12,-12,-12,-7,-7,-10,-10,-10,5,4,4,4,5,5,5,5,7,7,7,5,7,7,7,5];
+    let base = overall_base_value(overall);
+    let position_percent = POSITION.get(position as usize).copied().unwrap_or(0);
+    let total_percent = 100 + position_percent + potential_modifier(potential - overall)
+        + age_modifier(age, position == 0);
+    let numerator = i128::from(base) * i128::from(currency_numerator) * i128::from(total_percent);
+    let denominator = i128::from(currency_denominator) * 100;
+    let value = round_market_value_ratio(numerator, denominator);
+    if value < 0 {
+        ((i128::from(base) * i128::from(currency_numerator)
+            / i128::from(currency_denominator) / 10) as i64).max(10_000)
+    } else {
+        value.max(10_000)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FifaCurrency {
+    Dollars,
+    Euros,
+    Sterling,
+}
+
+impl FifaCurrency {
+    fn from_save_code(code: i64) -> Result<Self, String> {
+        match code {
+            0 => Ok(Self::Dollars),
+            1 => Ok(Self::Euros),
+            2 => Ok(Self::Sterling),
+            _ => Err(format!("FIFA save uses an unknown currency code: {code}")),
+        }
+    }
+
+    fn code(self) -> &'static str {
+        match self {
+            Self::Dollars => "USD",
+            Self::Euros => "EUR",
+            Self::Sterling => "GBP",
+        }
+    }
+
+    fn ratio(self) -> (i64, i64) {
+        match self {
+            Self::Dollars => (118, 100),
+            Self::Euros => (100, 100),
+            Self::Sterling => (88, 100),
+        }
+    }
+}
+
+fn market_value(overall: i64, potential: i64, age: u32, position: i64, currency: FifaCurrency) -> i64 {
+    let (numerator, denominator) = currency.ratio();
+    market_value_in_currency(overall, potential, age, position, numerator, denominator)
+}
+
+fn youth_potential_range(potential: i64, months_in_squad: i64, swing_low: i64) -> String {
+    // FIFA does not store the two displayed endpoints. A newly signed academy
+    // player starts with a broad band around the hidden potential. Over the
+    // first six months that band moves towards the saved swing-adjusted centre
+    // and settles at the six-point range shown by a fully known prospect.
+    //
+    // `potentialvariance` is an internal generation/narrowing state, not the
+    // visible half-width. Treating it as a spread produced inverted or exact
+    // ranges for newly signed players.
+    let initial_minimum = if potential >= 75 {
+        (potential - 8).max(75)
+    } else {
+        (potential - 8).max(1)
+    };
+    let initial_maximum = if potential >= 75 {
+        94
+    } else {
+        (potential + 13).min(94)
+    };
+    let settled_centre = (potential + swing_low).clamp(1, 94);
+    let settled_minimum = (settled_centre - 3).max(1);
+    let settled_maximum = (settled_centre + 3).min(94);
+    let progress = months_in_squad.clamp(0, 6);
+    let interpolate = |start: i64, end: i64| {
+        (start * (6 - progress) + end * progress + 3) / 6
+    };
+    let minimum = interpolate(initial_minimum, settled_minimum);
+    let maximum = interpolate(initial_maximum, settled_maximum).max(minimum);
+    format!("{minimum}-{maximum}")
 }
 
 fn player_name(
@@ -222,7 +359,21 @@ pub(crate) fn raw_csv_and_context(bytes: &[u8], save_label: &str) -> Result<(Str
     let links = find_table(&blocks, "RrqT")?;
     let teams = find_table(&blocks, "lyxL")?;
     let users = find_table(&blocks, "mPrV")?;
+    let manager_preferences = find_table(&blocks, "dqXv")?;
+    let currency = FifaCurrency::from_save_code(manager_preferences.integer(0, "UtVA", 0)?)?;
     let user_team = users.integer(0, "NTyS", -1)?;
+
+    // Career contracts contain the current weekly wage for players whose
+    // contracts are persisted by the active career. This includes the user's
+    // squad and can include players involved in career transactions.
+    let mut wage_by_player = HashMap::new();
+    if let Some(contracts) = blocks.iter().find_map(|block| offline_db::open_table(block, "DvsP").transpose()).transpose()? {
+        for row in 0..contracts.valid_records {
+            let player_id = contracts.integer(row, "ykFq", 0)?;
+            let wage = contracts.integer(row, "cmGX", 0)?;
+            if player_id > 0 && wage >= 0 { wage_by_player.insert(player_id, wage); }
+        }
+    }
 
     let mut names = cache(NAME_CACHE);
     if let Ok(dynamic_names) = find_table(&blocks, "bneD") {
@@ -257,10 +408,20 @@ pub(crate) fn raw_csv_and_context(bytes: &[u8], save_label: &str) -> Result<(Str
         team_by_player.entry(player_id).or_insert(team_id);
     }
 
+    let mut youth_by_player = HashMap::new();
+    if let Some(youth) = blocks.iter().find_map(|block| offline_db::open_table(block, "IOmq").transpose()).transpose()? {
+        for row in 0..youth.valid_records {
+            youth_by_player.insert(
+                youth.integer(row, "ykFq", 0)?,
+                (youth.integer(row, "Otjv", 0)?, youth.integer(row, "vYeO", -10)?),
+            );
+        }
+    }
+
     let known_records = context.records.iter().map(|record| record.player_id).collect::<HashSet<_>>();
     let mut headers = vec![
-        "playerid", "name", "club", "age", "positions", "preferredfoot", "scope", "knowledge",
-        "overall", "value", "wage",
+        "playerid", "name", "club", "age", "positions", "preferredfoot", "scope", "shortlisted", "scouting", "knowledge",
+        "overall", "potential", "value", "wage", "currency",
     ];
     headers.extend(ATTRIBUTE_FIELDS.iter().map(|(name, _)| *name));
     let mut output = format!("{}\n", headers.join(","));
@@ -270,6 +431,7 @@ pub(crate) fn raw_csv_and_context(bytes: &[u8], save_label: &str) -> Result<(Str
         if player_id <= 0 { continue; }
         let current_team = team_by_player.get(&player_id).copied();
         let own_squad = current_team == Some(user_team);
+        let youth = youth_by_player.get(&player_id).copied();
         let name = player_name(
             player_id,
             players.integer(row, "tHlO", 0)?,
@@ -277,7 +439,11 @@ pub(crate) fn raw_csv_and_context(bytes: &[u8], save_label: &str) -> Result<(Str
             players.integer(row, "HDYx", 0)?,
             &names, &edited,
         );
-        let club = current_team.and_then(|id| team_names.get(&id).cloned()).unwrap_or_else(|| "Free Agents".into());
+        let club = if youth.is_some() {
+            team_names.get(&user_team).cloned().unwrap_or_else(|| save_label.to_owned())
+        } else {
+            current_team.and_then(|id| team_names.get(&id).cloned()).unwrap_or_else(|| "Free Agents".into())
+        };
         let mut seen = HashSet::new();
         let mut positions = Vec::new();
         for (field, low) in [("wZQU", 0), ("NgVS", -1), ("OblE", -1), ("YnYz", -1)] {
@@ -290,13 +456,14 @@ pub(crate) fn raw_csv_and_context(bytes: &[u8], save_label: &str) -> Result<(Str
         let age = player_age(players.integer(row, "WVIU", 0)?, context.current_date);
         let overall = players.integer(row, "UERs", 1)?;
         let potential = players.integer(row, "mpuH", 1)?;
-        let value = age.map(|age| market_value(overall, potential, age, primary_position));
+        let value = if youth.is_some() { None } else { age.map(|age| market_value(overall, potential, age, primary_position, currency)) };
+        let visible_potential = youth.map(|(months, swing)| youth_potential_range(potential, months, swing)).unwrap_or_default();
         let foot = match players.integer(row, "MDvm", 1)? { 1 => "Right", 2 => "Left", _ => "Unknown" };
-        let scope = if own_squad { "My squad" } else { "Internal" };
-        let knowledge = if own_squad { "Exact" } else { "Internal" };
+        let scope = if youth.is_some() { "Youth academy" } else if own_squad { "My squad" } else { "Internal" };
+        let knowledge = if youth.is_some() || own_squad { "Exact" } else { "Internal" };
         let mut values = vec![
             player_id.to_string(), name, club, age.map(|value| value.to_string()).unwrap_or_default(), positions.join("/"), foot.into(), scope.into(),
-            knowledge.into(), overall.to_string(), value.map(|value| value.to_string()).unwrap_or_default(), String::new(),
+            "false".into(), "false".into(), knowledge.into(), overall.to_string(), visible_potential, value.map(|value| value.to_string()).unwrap_or_default(), wage_by_player.get(&player_id).map(ToString::to_string).unwrap_or_default(), currency.code().into(),
         ];
         for (_, field) in ATTRIBUTE_FIELDS {
             values.push(players.integer(row, field, 1)?.to_string());
@@ -330,8 +497,69 @@ mod tests {
     #[test]
     fn calculates_reference_age_and_market_value() {
         assert_eq!(player_age(150_946, 20_220_901), Some(26));
-        assert_eq!(market_value(74, 75, 26, 25), 6_500_000);
-        assert_eq!(market_value(74, 76, 26, 25), 6_500_000);
-        assert_eq!(market_value(74, 77, 26, 25), 6_500_000);
+        assert_eq!(market_value_in_currency(74, 75, 26, 25, 100, 100), 5_000_000);
+        assert_eq!(market_value_in_currency(74, 75, 26, 5, 100, 100), 4_400_000);
+        assert_eq!(market_value(74, 75, 26, 25, FifaCurrency::Dollars), 6_000_000);
+        assert_eq!(market_value(74, 76, 26, 25, FifaCurrency::Dollars), 6_000_000);
+        assert_eq!(market_value(74, 77, 26, 25, FifaCurrency::Dollars), 6_500_000);
+        assert_eq!(market_value(60, 76, 18, 18, FifaCurrency::Dollars), 725_000);
+        assert_eq!(market_value(60, 80, 18, 18, FifaCurrency::Dollars), 800_000);
+        assert_eq!(market_value(60, 81, 18, 18, FifaCurrency::Dollars), 925_000);
+        assert_eq!(market_value(74, 75, 26, 25, FifaCurrency::Euros), 5_000_000);
+        assert_eq!(market_value(74, 75, 26, 25, FifaCurrency::Sterling), 4_400_000);
+        assert_eq!(FifaCurrency::from_save_code(0).unwrap(), FifaCurrency::Dollars);
+        assert_eq!(FifaCurrency::from_save_code(1).unwrap(), FifaCurrency::Euros);
+        assert_eq!(FifaCurrency::from_save_code(2).unwrap(), FifaCurrency::Sterling);
+        assert!(FifaCurrency::from_save_code(3).is_err());
+        assert_eq!(market_value_in_currency(86, 86, 36, 0, 100, 100), 7_500_000);
+        assert_eq!(market_value_in_currency(79, 79, 34, 12, 100, 100), 8_000_000);
+        // Visible FIFA 22 academy ranges from the same save. These cover both
+        // newly signed prospects and players whose reports have fully narrowed.
+        assert_eq!(youth_potential_range(82, 0, 3), "75-94");
+        assert_eq!(youth_potential_range(81, 0, 4), "75-94");
+        assert_eq!(youth_potential_range(86, 0, 5), "78-94");
+        assert_eq!(youth_potential_range(86, 6, 1), "84-90");
+        assert_eq!(youth_potential_range(89, 6, 1), "87-93");
+        assert_eq!(youth_potential_range(87, 6, 1), "85-91");
+    }
+
+    #[test]
+    fn matches_fifa_22_dollar_values_across_squad_profiles() {
+        // These cover goalkeepers, defenders, midfielders and attackers over
+        // varied ages, ratings and potential gaps. They guard the global FIFA
+        // 22 dollar conversion and display rounding, not individual players.
+        let cases = [
+            (64, 64, 24, 14, 800_000),
+            (65, 70, 19, 14, 1_200_000),
+            (69, 69, 22, 3, 1_800_000),
+            (67, 67, 31, 7, 875_000),
+            (72, 72, 30, 12, 2_700_000),
+            (71, 71, 28, 25, 2_300_000),
+            (62, 74, 34, 16, 825_000),
+            (58, 90, 17, 10, 1_100_000),
+            (57, 60, 22, 16, 275_000),
+            (66, 66, 23, 25, 1_200_000),
+            (65, 65, 23, 0, 725_000),
+            (56, 69, 18, 21, 400_000),
+            (70, 70, 24, 5, 1_900_000),
+            (75, 79, 23, 25, 9_500_000),
+            (73, 76, 24, 18, 4_900_000),
+            (76, 79, 23, 14, 12_000_000),
+            (77, 77, 27, 25, 13_500_000),
+            (78, 83, 22, 16, 25_500_000),
+            (75, 75, 25, 27, 7_500_000),
+            (63, 66, 21, 25, 800_000),
+            (58, 68, 18, 0, 425_000),
+            (75, 75, 30, 14, 6_500_000),
+            (75, 75, 32, 14, 5_000_000),
+            (73, 73, 29, 7, 3_200_000),
+            (68, 68, 32, 5, 925_000),
+            (75, 75, 33, 0, 2_200_000),
+            (75, 75, 28, 5, 5_500_000),
+            (71, 73, 26, 5, 2_400_000),
+        ];
+        for (overall, potential, age, position, expected) in cases {
+            assert_eq!(market_value(overall, potential, age, position, FifaCurrency::Dollars), expected);
+        }
     }
 }

@@ -2,7 +2,7 @@ import type { AttributeKey, Player, RatingRange } from './types'
 
 export const summaryCategories: { name: string; keys: AttributeKey[]; weights?: number[]; rounding?: 'nearest' }[] = [
   { name: 'Athleticism', keys: ['acceleration', 'sprintSpeed', 'agility', 'balance', 'jumping', 'stamina', 'strength', 'reactions'] },
-  { name: 'Technical ability', keys: ['ballControl', 'dribbling', 'headingAccuracy', 'curve', 'freeKickAccuracy'] },
+  { name: 'Technical Ability', keys: ['ballControl', 'dribbling', 'headingAccuracy', 'curve', 'freeKickAccuracy'] },
   { name: 'Shooting', keys: ['finishing', 'volleys', 'penalties', 'shotPower', 'longShots'] },
   // FIFA's scout card gives crossing and short passing more influence than
   // long passing and vision (rather than averaging only three passing fields).

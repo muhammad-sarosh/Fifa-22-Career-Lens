@@ -17,3 +17,8 @@ export async function pickCareerSave(): Promise<PickedCareer | null> {
   if (!('__TAURI_INTERNALS__' in window)) throw new Error('Career-save selection is available in the desktop app.')
   return invoke<PickedCareer | null>('pick_career_save')
 }
+
+export async function saveMarkdownExport(contents: string, suggestedName: string): Promise<boolean> {
+  if (!('__TAURI_INTERNALS__' in window)) return false
+  return invoke<boolean>('save_markdown_export', { contents, suggestedName })
+}

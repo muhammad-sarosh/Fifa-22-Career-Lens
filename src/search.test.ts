@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { emptyAttributes } from './scoring'
-import { playerMatchesSearch } from './search'
+import { playerMatchesPositions, playerMatchesSearch } from './search'
 import type { Player } from './types'
 
 const ndiaye: Player = {
   id: '237179', name: 'Cherif Ndiaye', club: 'Frens FC', age: 26,
   positions: ['ST', 'LW'], preferredFoot: 'Right', overall: { min: 74, max: 74 },
-  value: null, wage: null, scope: 'My squad', knowledge: 'Exact', attributes: emptyAttributes(),
+  potential: null, value: null, wage: null, scope: 'My squad', shortlisted: false, scouting: false, knowledge: 'Exact', attributes: emptyAttributes(),
 }
 
 describe('playerMatchesSearch', () => {
@@ -16,5 +16,17 @@ describe('playerMatchesSearch', () => {
 
   it('requires every search term to match', () => {
     expect(playerMatchesSearch(ndiaye, 'frens ramos')).toBe(false)
+  })
+
+  it('matches names without requiring their diacritics', () => {
+    const player = { ...ndiaye, name: 'Cléber Conceição', club: 'São Paulo' }
+    expect(playerMatchesSearch(player, 'cleber conceicao')).toBe(true)
+    expect(playerMatchesSearch(player, 'sao paulo cleber')).toBe(true)
+  })
+
+  it('matches any of the selected positions', () => {
+    expect(playerMatchesPositions(ndiaye, ['CAM', 'ST'])).toBe(true)
+    expect(playerMatchesPositions(ndiaye, ['CAM', 'CM'])).toBe(false)
+    expect(playerMatchesPositions(ndiaye, [])).toBe(true)
   })
 })

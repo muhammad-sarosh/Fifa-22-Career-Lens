@@ -235,7 +235,7 @@ dependencies = [
 
 [[package]]
 name = "career-lens"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "serde",
  "tauri",

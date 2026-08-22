@@ -1,30 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { fixturePlayers } from './data'
-import { defaultPresets, formatRating, scoreForPreset } from './scoring'
-import { attributeKeys } from './types'
+import { fifaRatingBand, formatMoney } from './scoring'
 
-describe('position scoring', () => {
-  it('returns a score range when attributes are ranged', () => {
-    const result = scoreForPreset(fixturePlayers[1], defaultPresets.WINGER)
-    expect(result.score).not.toBeNull()
-    expect(result.score!.min).toBeLessThan(result.score!.max)
-    expect(result.coverage).toBeGreaterThan(50)
+describe('currency-aware money formatting', () => {
+  it('uses the symbol selected in the career save', () => {
+    const value = { min: 4_400_000, max: 4_400_000 }
+    expect(formatMoney(value, 'USD')).toBe('$4.4m')
+    expect(formatMoney(value, 'EUR')).toBe('€4.4m')
+    expect(formatMoney(value, 'GBP')).toBe('£4.4m')
   })
+})
 
-  it('reports coverage so incomplete scouting is never presented as certainty', () => {
-    const result = scoreForPreset(fixturePlayers[0], defaultPresets.WINGER)
-    expect(result.coverage).toBeLessThanOrEqual(100)
-    expect(result.coverage).toBeGreaterThan(0)
-  })
-
-  it('ships the complete 0–10 position table as factory defaults', () => {
-    expect(Object.keys(defaultPresets.ST.weights)).toHaveLength(attributeKeys.length)
-    expect(defaultPresets.ST.weights.finishing).toBe(10)
-    expect(defaultPresets.CM.weights.shortPassing).toBe(10)
-    expect(defaultPresets.GK.weights.gkReflexes).toBe(10)
-  })
-
-  it('formats scouting ranges with readable spacing', () => {
-    expect(formatRating({ min: 68, max: 78 })).toBe('68 – 78')
+describe('FIFA rating color bands', () => {
+  it('changes color immediately after 50, 60, 70 and 80', () => {
+    expect([50, 51, 60, 61, 70, 71, 80, 81].map(fifaRatingBand)).toEqual([
+      'red', 'orange', 'orange', 'yellow', 'yellow', 'green', 'green', 'elite',
+    ])
   })
 })

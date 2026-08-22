@@ -1,4 +1,4 @@
-import { attributeKeys, type AttributeKey, type Player, type PositionPreset, type PresetId, type RatingRange } from './types'
+import { attributeKeys, type AttributeKey, type CurrencyCode, type Player, type PositionPreset, type PresetId, type RatingRange } from './types'
 
 export const attributeGroups: { name: string; keys: AttributeKey[] }[] = [
   { name: 'Technical', keys: ['ballControl', 'dribbling', 'crossing', 'shortPassing', 'longPassing', 'finishing', 'headingAccuracy', 'volleys', 'curve', 'freeKickAccuracy', 'penalties'] },
@@ -32,9 +32,11 @@ export const defaultPresets: Record<PresetId, PositionPreset> = {
 
 export const midpoint = (range: RatingRange | null) => range ? (range.min + range.max) / 2 : null
 export const formatRating = (range: RatingRange | null) => !range ? '—' : range.min === range.max ? String(range.min) : `${range.min} – ${range.max}`
-export const formatMoney = (range: RatingRange | null) => {
+export const fifaRatingBand = (value: number) => value <= 50 ? 'red' : value <= 60 ? 'orange' : value <= 70 ? 'yellow' : value <= 80 ? 'green' : 'elite'
+export const formatMoney = (range: RatingRange | null, currency: CurrencyCode = 'USD') => {
   if (!range) return '—'
-  const compact = (value: number) => value >= 1_000_000 ? `$${(value / 1_000_000).toFixed(value % 1_000_000 ? 1 : 0)}m` : `$${Math.round(value / 1000)}k`
+  const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$'
+  const compact = (value: number) => value >= 1_000_000 ? `${symbol}${(value / 1_000_000).toFixed(value % 1_000_000 ? 1 : 0)}m` : `${symbol}${Math.round(value / 1000)}k`
   return range.min === range.max ? compact(range.min) : `${compact(range.min)} – ${compact(range.max)}`
 }
 

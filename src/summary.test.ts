@@ -10,7 +10,7 @@ describe('FIFA scout summary categories', () => {
     for (const [key, value] of Object.entries(values)) attributes[key as keyof typeof attributes] = { min: value, max: value }
     const player = { attributes } as Player
     const results = Object.fromEntries(summaryCategories.map((category) => [category.name, averageRating(player, category.keys, category.rounding, category.weights)?.min]))
-    expect(results).toEqual({ Athleticism: 75, 'Technical ability': 59, Shooting: 65, Passing: 60, Defending: 33, Mentality: 56 })
+    expect(results).toEqual({ Athleticism: 75, 'Technical Ability': 59, Shooting: 65, Passing: 60, Defending: 33, Mentality: 56 })
   })
 
   it('matches Zaydou Youssouf’s displayed passing summary', () => {

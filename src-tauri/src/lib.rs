@@ -77,6 +77,21 @@ struct RevealContext {
     current_date: u32,
 }
 
+fn player_is_scouting(record: &PlayerRevealRecord) -> bool {
+    record.list_state == Some(2) || record.source != u16::MAX
+}
+
+fn player_is_shortlisted(record: &PlayerRevealRecord) -> bool {
+    record.list_state == Some(1)
+        || (record.source != u16::MAX && (record.progress == 16 || record.flags == 204))
+}
+
+fn revealed_player_scope(record: &PlayerRevealRecord) -> &'static str {
+    if player_is_shortlisted(record) { "Shortlist" }
+    else if player_is_scouting(record) { "Scouting" }
+    else { "Player search" }
+}
+
 #[cfg(any())]
 mod fifa_memory {
     use super::{PlayerRevealRecord, RevealContext};
@@ -737,9 +752,12 @@ fn sanitize_player_source(content: &str, context: &RevealContext) -> Result<Stri
     let column = |name: &str| headers.iter().position(|header| header == name).ok_or_else(|| format!("Missing player column: {name}"));
     let player_id_column = column("playerid")?;
     let scope_column = column("scope")?;
+    let shortlisted_column = column("shortlisted")?;
+    let scouting_column = column("scouting")?;
     let positions_column = column("positions")?;
     let knowledge_column = column("knowledge")?;
     let overall_column = column("overall")?;
+    let potential_column = column("potential")?;
     let value_column = column("value")?;
     let wage_column = column("wage")?;
     let attribute_start = column("ballcontrol")?;
@@ -758,20 +776,18 @@ fn sanitize_player_source(content: &str, context: &RevealContext) -> Result<Stri
         if fields.len() != headers.len() { return Err("The player source contains a malformed row".into()); }
         let player_id = fields[player_id_column].parse::<u32>().map_err(|_| "The player source contains an invalid player ID")?;
         let own_squad = fields[scope_column] == "My squad";
-        if !own_squad {
+        let youth_academy = fields[scope_column] == "Youth academy";
+        if !own_squad && !youth_academy {
             let calculated_overall = fields[overall_column].clone();
             let calculated_value = fields[value_column].clone();
             fields[overall_column].clear();
+            fields[potential_column].clear();
             fields[value_column].clear();
             fields[wage_column].clear();
             if let Some(record) = records.get(&player_id) {
-                fields[scope_column] = match record.list_state {
-                    Some(1) => "Shortlist",
-                    Some(2) => "Scouting",
-                    _ if record.progress == 16 => "Shortlist",
-                    _ if record.source != u16::MAX => "Scouting",
-                    _ => "Player search",
-                }.into();
+                fields[scope_column] = revealed_player_scope(record).into();
+                fields[shortlisted_column] = player_is_shortlisted(record).to_string();
+                fields[scouting_column] = player_is_scouting(record).to_string();
                 let exact = attribute_columns.iter().map(|column| column.and_then(|index| fields[index].parse::<u32>().ok())).collect::<Vec<_>>();
                 let states = scouting_states(&exact, &fields[positions_column], record.flags);
                 let mut random_state = context.seed_multiplier.wrapping_mul(player_id);
@@ -932,13 +948,51 @@ async fn pick_career_save(app: tauri::AppHandle) -> Result<Option<PickedCareer>,
     }))
 }
 
+#[tauri::command]
+async fn save_markdown_export(
+    app: tauri::AppHandle,
+    contents: String,
+    suggested_name: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+    if contents.len() > 10_000_000 {
+        return Err("The comparison export is unexpectedly large".into());
+    }
+    let safe_name = if suggested_name.to_ascii_lowercase().ends_with(".md") {
+        suggested_name
+    } else {
+        format!("{suggested_name}.md")
+    };
+    let Some(selected) = app
+        .dialog()
+        .file()
+        .set_title("Export Career Lens comparison")
+        .add_filter("Markdown", &["md"])
+        .set_file_name(safe_name)
+        .blocking_save_file()
+    else {
+        return Ok(false);
+    };
+    let path = selected
+        .into_path()
+        .map_err(|error| format!("The selected destination is not a local file: {error}"))?;
+    fs::write(path, contents).map_err(|error| format!("Could not save the comparison: {error}"))?;
+    Ok(true)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Native commands only list saves, open a user-selected save, and decode verified temporary copies.
-    // No save-writing, shell, game-process, or arbitrary-path API is exposed to the frontend.
+    // Career-save commands only list saves, open a user-selected save, and decode verified temporary copies.
+    // The only write command exports user-generated Markdown to a destination explicitly chosen by the user.
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![list_career_saves, probe_career_save, read_career_save, pick_career_save])
+        .invoke_handler(tauri::generate_handler![
+            list_career_saves,
+            probe_career_save,
+            read_career_save,
+            pick_career_save,
+            save_markdown_export
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run Career Lens");
 }
@@ -979,7 +1033,7 @@ mod tests {
 
     #[test]
     fn sanitizes_saved_visibility_before_frontend_delivery() {
-        let source = "playerid,name,club,age,positions,preferredfoot,scope,knowledge,overall,value,wage,ballcontrol,interceptions,standingtackle\n256903,Ramos,Benfica,,ST,Right,Internal,Internal,75,,,72,30,28\n7,Own Player,Frens,,CM,Right,My squad,Exact,80,,,81,72,70\n8,Hidden Player,Other,,CM,Right,Internal,Internal,70,,,74,63,62\n";
+        let source = "playerid,name,club,age,positions,preferredfoot,scope,shortlisted,scouting,knowledge,overall,potential,value,wage,ballcontrol,interceptions,standingtackle\n256903,Ramos,Benfica,,ST,Right,Internal,false,false,Internal,75,,,,72,30,28\n7,Own Player,Frens,,CM,Right,My squad,false,false,Exact,80,,,,81,72,70\n8,Hidden Player,Other,,CM,Right,Internal,false,false,Internal,70,,,,74,63,62\n";
         let context = RevealContext {
             records: vec![PlayerRevealRecord { player_id: 256903, source: 0, progress: 16, flags: 1, date: 20220808, extra: u32::MAX, list_state: Some(1) }],
             seed_multiplier: 12345,
@@ -989,14 +1043,66 @@ mod tests {
         let output = sanitize_player_source(source, &context).unwrap();
         let rows = output.lines().map(|line| parse_csv_row(line).unwrap()).collect::<Vec<_>>();
         assert_eq!(rows[1][6], "Shortlist");
-        assert_eq!(rows[1][7], "Ranged");
-        assert_eq!(rows[1][8], "");
-        assert!(rows[1][11].contains('-'));
-        assert_eq!(rows[1][12], "");
-        assert_eq!(rows[2][8], "80");
+        assert_eq!(rows[1][7], "true");
+        assert_eq!(rows[1][8], "true");
+        assert_eq!(rows[1][9], "Ranged");
+        assert_eq!(rows[1][10], "");
+        assert!(rows[1][14].contains('-'));
+        assert_eq!(rows[1][15], "");
+        assert_eq!(rows[2][10], "80");
         assert_eq!(rows[3][6], "Other");
-        assert_eq!(rows[3][11], "");
+        assert_eq!(rows[3][14], "");
     }
+
+    #[test]
+    fn classifies_transfer_hub_records_from_saved_flags() {
+        let record = |source, progress, flags, list_state| PlayerRevealRecord {
+            player_id: 1,
+            source,
+            progress,
+            flags,
+            date: 0,
+            extra: 0,
+            list_state,
+        };
+        assert_eq!(revealed_player_scope(&record(2, 0, 204, None)), "Shortlist");
+        assert_eq!(revealed_player_scope(&record(3, 16, 29, None)), "Shortlist");
+        assert_eq!(revealed_player_scope(&record(1, 8, 29, None)), "Scouting");
+        assert_eq!(revealed_player_scope(&record(u16::MAX, 0, 0, None)), "Player search");
+        let dual = record(2, 0, 204, None);
+        assert!(player_is_shortlisted(&dual));
+        assert!(player_is_scouting(&dual));
+    }
+
+    #[test]
+    #[ignore = "requires the user's Random FIFA 22 save; original is copied and opened read-only"]
+    fn validates_random_shortlist_and_youth_academy() {
+        let name = std::env::var("CAREER_LENS_TEST_SAVE").expect("CAREER_LENS_TEST_SAVE must be set");
+        let output = read_offline_career_export(name).expect("offline export failed");
+        let mut lines = output.lines();
+        let headers = parse_csv_row(lines.next().expect("header missing")).unwrap();
+        let player_name = headers.iter().position(|header| header == "name").unwrap();
+        let scope = headers.iter().position(|header| header == "scope").unwrap();
+        let shortlisted = headers.iter().position(|header| header == "shortlisted").unwrap();
+        let scouting = headers.iter().position(|header| header == "scouting").unwrap();
+        let potential = headers.iter().position(|header| header == "potential").unwrap();
+        let rows = lines.map(|line| parse_csv_row(line).unwrap()).collect::<Vec<_>>();
+
+        for expected in ["Burgzorg", "Thorstvedt", "Kovalenko", "Hove", "Hjulsager", "Marcondes", "Chaplin", "Navarro", "Amallah", "Vlap", "Maziz", "Păun"] {
+            assert!(rows.iter().any(|row| {
+                row[player_name].contains(expected)
+                    && row[scope] == "Shortlist"
+                    && row[shortlisted] == "true"
+                    && row[scouting] == "true"
+            }), "{expected} was not classified as both shortlisted and scouted");
+        }
+
+        let academy = rows.iter().filter(|row| row[scope] == "Youth academy").collect::<Vec<_>>();
+        assert_eq!(academy.len(), 4);
+        assert!(academy.iter().all(|row| row[potential].contains('-')));
+
+    }
+
 
     #[test]
     #[cfg(any())]
@@ -1175,4 +1281,5 @@ mod tests {
         assert_eq!(career_display_name(&source, &name), "Frens FC");
         println!("decoded player 237179 at row {ndiaye}, names={first_name_id}/{last_name_id}/{common_name_id}, team {team_id} ({team_name}), from {} packed records", players.valid_records);
     }
+
 }
