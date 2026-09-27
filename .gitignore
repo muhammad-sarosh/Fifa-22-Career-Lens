@@ -11,11 +11,14 @@ src-tauri/target/
 .tmp/
 diagnostics/
 live-editor/
+working/
 career_lens_diagnostic.txt
 career_lens_export.csv
 CHECKPOINT.md
 
 # Generated TypeScript build files
+__pycache__/
+*.py[cod]
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
