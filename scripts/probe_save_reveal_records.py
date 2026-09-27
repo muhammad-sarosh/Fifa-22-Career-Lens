@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import struct
 from pathlib import Path
 
@@ -11,9 +10,10 @@ from pathlib import Path
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("save", type=Path)
-    parser.add_argument("player_csv", type=Path)
+    parser.add_argument("player_csv", type=Path, nargs="?")
     args = parser.parse_args()
-    players = {int(row["playerid"]) for row in csv.DictReader(args.player_csv.open(encoding="utf-8-sig"))}
+    # The structural probe does not require a player export. Keep the optional
+    # argument for compatibility with earlier invocations.
     data = args.save.read_bytes()
     signature = b"DB\x00\x08\x00\x00\x00\x00"
     cursor = 0
