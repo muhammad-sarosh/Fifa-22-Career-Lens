@@ -7,9 +7,9 @@ Career Lens is a read-only player database and comparison app for FIFA 22 Manage
 ![Player database with search, filters, and player details](screenshots/players.png)
 
 | Comparison matrix | Player profiles |
-| --- | --- |
+| :---: | :---: |
 | ![Comparison matrix with weighted scores and highlighted attributes](screenshots/comparison-matrix.png) | ![Side-by-side player profiles](screenshots/comparison-profiles.png) |
-| Ranking | Preset settings |
+| **Ranking** | **Preset settings** |
 | ![Ranked player comparison](screenshots/comparison-ranking.png) | ![Position preset settings and attribute weights](screenshots/preset-settings.png) |
 
 ## Highlights
